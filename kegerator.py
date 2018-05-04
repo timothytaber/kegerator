@@ -100,7 +100,7 @@ def checkFan():
     global fanOn
     deltaTemp = towerTemp - baseTemp
     if fanOn:
-        if deltaTemp <= plusMinus * -1:
+        if deltaTemp <= 0:
             GPIO.output(fanPin, GPIO.LOW)
             fanOn = False
         else:
@@ -112,10 +112,26 @@ def checkFan():
         else:
             GPIO.output(fanPin, GPIO.LOW)
 
+def checkCompressor():
+    global compressorOn
+    if compressorOn:
+        if baseTemp <= minTemp:
+            GPIO.output(compressorPin, GPIO.LOW)
+            fanOn = False
+        else:
+            GPIO.output(fanPin, GPIO.HIGH)
+    else:
+        if baseTemp >= maxTemp:
+            GPIO.output(compressorPin, GPIO.HIGH)
+            fanOn = True
+        else:
+            GPIO.output(fanPin, GPIO.LOW)
+
 try:
     while True:
         checkTemps()
         checkFan()
+        checkCompressor()
         refreshScreen()
 
 except KeyboardInterrupt:
