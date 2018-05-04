@@ -3,6 +3,8 @@
 
 import time
 
+import RPi.GPIO as GPIO
+
 import Adafruit_DHT
 import Adafruit_SSD1306
 
@@ -16,15 +18,28 @@ sensor = Adafruit_DHT.AM2302
 
 towerPin = 23
 basePin = 24
+fanPin = 8
+compressorPin = 25
+
 towerTemp = 0
 baseTemp = 0
+idealTemp = 40
+plusMinus = 2
+maxTemp = idealTemp + plusMinus
+minTemp = idealTemp - plusMinus
+compressorOn = False
+fanOn = False
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(fanPin, GPIO.OUT)
+GPIO.setup(compressorPin, GPIO.OUT)
+GPIO.output(fanPin, GPIO.HIGH)
+GPIO.output(compressorPin, GPIO.HIGH)
 
 # Initialize 128x64 OLED display with hardware I2C:
 RST = None
 disp = Adafruit_SSD1306.SSD1306_128_64(rst=RST)
 disp.begin()
-
-# Clear display.
 disp.clear()
 disp.display()
 
@@ -81,6 +96,28 @@ def checkTemps():
     towerTemp = towerCels * 1.8 + 32
     baseTemp = baseCels * 1.8 + 32
 
-while True:
-    checkTemps()
-    refreshScreen()
+def checkFan():
+    global fanOn
+    deltaTemp = towerTemp - baseTemp
+    if fanOn:
+        if deltaTemp <= plusMinus * -1:
+            GPIO.output(fanPin, GPIO.HIGH)
+            fanOn = False
+        else:
+            GPIO.output(fanPin, GPIO.LOW)
+    else:
+        if deltaTemp >= plusMinus:
+            GPIO.output(fanPin, GPIO.LOW)
+            fanOn = True
+        else:
+            GPIO.output(fanPin, GPIO.HIGH)
+
+try:
+    while True:
+        checkTemps()
+        checkFan()
+        refreshScreen()
+
+except KeyboardInterrupt:
+    print "Quit"
+    GPIO.cleanup()
