@@ -55,10 +55,6 @@ font = ImageFont.load_default()
 # Some other nice fonts to try: http://www.dafont.com/bitmap.php
 # font = ImageFont.truetype('Minecraftia.ttf', 8)
 
-while True:
-    checkTemps()
-    refreshScreen()
-
 def refreshScreen():
 
     # Draw a black filled box to clear the image.
@@ -80,5 +76,11 @@ def checkTemps():
     towerHum, towerCels = Adafruit_DHT.read_retry(sensor, towerPin)
     baseHum, baseCels = Adafruit_DHT.read_retry(sensor, basePin)
 
-    global towerTemp = towerCels * 1.8 + 32
-    global baseTemp = baseCels * 1.8 + 32
+    global towerTemp
+    global baseTemp
+    towerTemp = towerCels * 1.8 + 32
+    baseTemp = baseCels * 1.8 + 32
+
+while True:
+    checkTemps()
+    refreshScreen()
