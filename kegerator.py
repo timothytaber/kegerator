@@ -33,8 +33,8 @@ fanOn = False
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(fanPin, GPIO.OUT)
 GPIO.setup(compressorPin, GPIO.OUT)
-GPIO.output(fanPin, GPIO.HIGH)
-GPIO.output(compressorPin, GPIO.HIGH)
+GPIO.output(fanPin, GPIO.LOW)
+GPIO.output(compressorPin, GPIO.LOW)
 
 # Initialize 128x64 OLED display with hardware I2C:
 RST = None
@@ -101,16 +101,16 @@ def checkFan():
     deltaTemp = towerTemp - baseTemp
     if fanOn:
         if deltaTemp <= plusMinus * -1:
-            GPIO.output(fanPin, GPIO.HIGH)
+            GPIO.output(fanPin, GPIO.LOW)
             fanOn = False
         else:
-            GPIO.output(fanPin, GPIO.LOW)
+            GPIO.output(fanPin, GPIO.HIGH)
     else:
         if deltaTemp >= plusMinus:
-            GPIO.output(fanPin, GPIO.LOW)
+            GPIO.output(fanPin, GPIO.HIGH)
             fanOn = True
         else:
-            GPIO.output(fanPin, GPIO.HIGH)
+            GPIO.output(fanPin, GPIO.LOW)
 
 try:
     while True:
