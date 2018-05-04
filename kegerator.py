@@ -119,13 +119,13 @@ def checkCompressor():
             GPIO.output(compressorPin, GPIO.LOW)
             fanOn = False
         else:
-            GPIO.output(fanPin, GPIO.HIGH)
+            GPIO.output(compressorPin, GPIO.HIGH)
     else:
         if baseTemp >= maxTemp:
             GPIO.output(compressorPin, GPIO.HIGH)
             fanOn = True
         else:
-            GPIO.output(fanPin, GPIO.LOW)
+            GPIO.output(compressorPin, GPIO.LOW)
 
 try:
     while True:
