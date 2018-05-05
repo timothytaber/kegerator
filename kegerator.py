@@ -77,8 +77,12 @@ def refreshScreen():
 
     # Write two lines of text.
 
-    draw.text((x, top),       "Base={0:0.1f}F".format(baseTemp), font=font, fill=255)
-    draw.text((x, top+8),     "Tower={0:0.1f}F".format(towerTemp), font=font, fill=255)
+    draw.text((x, top),       "Base = {0:0.1f}F".format(baseTemp), font=font, fill=255)
+    draw.text((x, top+8),     "Tower = {0:0.1f}F".format(towerTemp), font=font, fill=255)
+    draw.text((x, top+16),    "Compressor On = {0:0.1f}".format(compressorOn), font=font, fill=255)
+    draw.text((x, top+24),     "Fan On = {0:0.1f}".format(fanOn), font=font, fill=255)
+    draw.text((x, top+32),     "Max = {0:0.1f}F".format(maxTemp), font=font, fill=255)
+    draw.text((x, top+40),     "Min = {0:0.1f}F".format(minTemp), font=font, fill=255)
 
     # Display image.
     disp.image(image)
@@ -117,13 +121,13 @@ def checkCompressor():
     if compressorOn:
         if baseTemp <= minTemp:
             GPIO.output(compressorPin, GPIO.LOW)
-            fanOn = False
+            compressorOn = False
         else:
             GPIO.output(compressorPin, GPIO.HIGH)
     else:
         if baseTemp >= maxTemp:
             GPIO.output(compressorPin, GPIO.HIGH)
-            fanOn = True
+            compressorOn = True
         else:
             GPIO.output(compressorPin, GPIO.LOW)
 
