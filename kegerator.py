@@ -12,29 +12,25 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 
-# Sensor should be set to Adafruit_DHT.DHT11,
-# Adafruit_DHT.DHT22, or Adafruit_DHT.AM2302.
-sensor = Adafruit_DHT.AM2302
+import json
 
-towerPin = 23
-basePin = 24
-fanPin = 8
-compressorPin = 25
+TOWER_PIN = 23
+BASE_PIN = 24
+FAN_PIN = 8
+COMPRESSOR_PIN = 25
 
-towerTemp = 0
-baseTemp = 0
-idealTemp = 40
-plusMinus = 2
-maxTemp = idealTemp + plusMinus
-minTemp = idealTemp - plusMinus
 compressorOn = False
 fanOn = False
 
+# Set temperature sensors to Adafruit_DHT.AM2302
+sensor = Adafruit_DHT.AM2302
+
+# Initialize relay GPIO pins & set to low:
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(fanPin, GPIO.OUT)
-GPIO.setup(compressorPin, GPIO.OUT)
-GPIO.output(fanPin, GPIO.LOW)
-GPIO.output(compressorPin, GPIO.LOW)
+GPIO.setup(FAN_PIN, GPIO.OUT)
+GPIO.setup(COMPRESSOR_PIN, GPIO.OUT)
+GPIO.output(FAN_PIN, GPIO.LOW)
+GPIO.output(COMPRESSOR_PIN, GPIO.LOW)
 
 # Initialize 128x64 OLED display with hardware I2C:
 RST = None
@@ -77,61 +73,74 @@ def refreshScreen():
 
     # Write two lines of text.
 
-    draw.text((x, top),       "Base={0:0.1f}F".format(baseTemp), font=font, fill=255)
-    draw.text((x, top+8),     "Tower={0:0.1f}F".format(towerTemp), font=font, fill=255)
+    draw.text((x, top), "Base={0:0.1f}F".format(baseTemp), font=font, fill=255)
+    draw.text((x, top+8), "Tower={0:0.1f}F".format(towerTemp), font=font, fill=255)
+    draw.text((x, top+16), "Now pouring: {}".format(onTap), font=font, fill=255)
 
     # Display image.
     disp.image(image)
     disp.display()
     time.sleep(.1)
 
-def checkTemps():
+def updateJson():
+    cfg = open('config.json', 'r')
+    config = json.load(cfg)
+    cfg.close()
+    return config
+
+def getTemp(pin):
+    """Uses Adafruit_DHT library to read from temperature sensors"""
     # Try to grab a sensor reading.  Use the read_retry method which will retry up
     # to 15 times to get a sensor reading (waiting 2 seconds between each retry).
-    towerHum, towerCels = Adafruit_DHT.read_retry(sensor, towerPin)
-    baseHum, baseCels = Adafruit_DHT.read_retry(sensor, basePin)
+    humidity, celcius = Adafruit_DHT.read_retry(sensor, pin)
+    fahrenheit = celcius * 1.8 + 32
+    return fahrenheit
 
-    global towerTemp
-    global baseTemp
-    towerTemp = towerCels * 1.8 + 32
-    baseTemp = baseCels * 1.8 + 32
-
-def checkFan():
-    global fanOn
-    deltaTemp = towerTemp - baseTemp
-    if fanOn:
-        if deltaTemp <= 0:
-            GPIO.output(fanPin, GPIO.LOW)
-            fanOn = False
+def checkFan(on, tower, base, setDelta):
+    currentDelta = tower - base
+    if on:
+        if currentDelta <= 0:
+            GPIO.output(FAN_PIN, GPIO.LOW)
+            return False
         else:
-            GPIO.output(fanPin, GPIO.HIGH)
+            GPIO.output(FAN_PIN, GPIO.HIGH)
+            return True
     else:
-        if deltaTemp >= plusMinus:
-            GPIO.output(fanPin, GPIO.HIGH)
-            fanOn = True
+        if currentDelta >= setDelta:
+            GPIO.output(FAN_PIN, GPIO.HIGH)
+            return True
         else:
-            GPIO.output(fanPin, GPIO.LOW)
+            GPIO.output(FAN_PIN, GPIO.LOW)
+            return False
 
-def checkCompressor():
-    global compressorOn
-    if compressorOn:
-        if baseTemp <= minTemp:
-            GPIO.output(compressorPin, GPIO.LOW)
-            fanOn = False
+def checkCompressor(on, base, max, min):
+    if on:
+        if base <= min:
+            GPIO.output(COMPRESSOR_PIN, GPIO.LOW)
+            return False
         else:
-            GPIO.output(compressorPin, GPIO.HIGH)
+            GPIO.output(COMPRESSOR_PIN, GPIO.HIGH)
+            return True
     else:
-        if baseTemp >= maxTemp:
-            GPIO.output(compressorPin, GPIO.HIGH)
-            fanOn = True
+        if base >= max:
+            GPIO.output(COMPRESSOR_PIN, GPIO.HIGH)
+            return True
         else:
-            GPIO.output(compressorPin, GPIO.LOW)
+            GPIO.output(COMPRESSOR_PIN, GPIO.LOW)
+            return False
 
 try:
     while True:
-        checkTemps()
-        checkFan()
-        checkCompressor()
+        fromConfig = updateJson()
+        onTap = fromConfig['ON_TAP']
+        idealTemp = fromConfig['TEMPS']['IDEAL']
+        plusMinus = fromConfig['TEMPS']['PLUS_MINUS']
+        maxTemp = idealTemp + plusMinus
+        minTemp = idealTemp - plusMinus
+        baseTemp = getTemp(BASE_PIN)
+        towerTemp = getTemp(TOWER_PIN)
+        fanOn = checkFan(fanOn, towerTemp, baseTemp, plusMinus)
+        compressorOn = checkCompressor(compressorOn, baseTemp, maxTemp, minTemp)
         refreshScreen()
 
 except KeyboardInterrupt:
